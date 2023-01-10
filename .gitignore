@@ -1,6 +1,18 @@
 .vscode
 target
+# Local .terraform directories
+**/.terraform/*
 
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+myhosts
+
+.DS_Store
+
+#TODO Check to see if we should check in these 
+.terraform.lock.hcl
 
 # Compiled class file
 *.class
