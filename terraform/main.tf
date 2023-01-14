@@ -1,6 +1,6 @@
 locals {
   ami_id = "ami-09e67e426f25ce0d7"
-  vpc_id = "vpc-05b1b209ad6a4ce79"
+  vpc_id = "vpc-05f5f5ac8de80a92a"
   ssh_user = "ubuntu"
   key_name = "Demokey"
   private_key_path = "/Users/toshmickler/projects/capstone/terraform/Demokey.pem"
@@ -8,9 +8,9 @@ locals {
 
 provider "aws" {
   region     = "us-east-1"
-  access_key = "ASIA3NGD24IXOJDELDIM"
-  secret_key = "vY6myqA03GQOzVHESoohqFgoUvNOO8gBztj4XcL/"
-  token = "FwoGZXIvYXdzEDwaDHSfjiyPckCgIByQ/CKzAStHDPNCY197ebs94R4z6p8EabBX45VAT+GUxXh89pB3DQSmGyn/C12AkxxSdzinIPdml6A8XCahz4M7icIuu9zfVO2VQjClOjZ5JKCPJcG3AMghTDQB9eZUZDj6m1hKTsXBb6CiWM2YDMxrgdO+ig1HH8i7Tgx0b9c9kayYAs4g+5dL+wJGXHWV+6ePFRTYQisORHcrUrpgWcoScQeaqfVTM64Ka5TcaM/K1DNuWa+LuNoFKOeU850GMi3czjyrLBLcHLlNJ6fqFgQGoses45MNclp1Tkw8OsExRPLGNRDIJ7J8aHjhKfo="
+  access_key = "ASIA3NGD24IXMFFYDGMH"
+  secret_key = "Le/CpuRok0bbxLyVFuVMckT0ZpaJvufuurgxLXLH"
+  token = "FwoGZXIvYXdzEJr//////////wEaDMlvJfs+fPgmQGdOlyKzAWhSc2GAI1OKzrn8RlyQ7YTDa9XEUj4AuWOx/Y1sYEVFygR4sTfcvHW3Zd18Io4iCZBIytGM79DlJ6F+FkDHTZk0NpRbpfxER5x9NvRgx7JVrbhDrKzMQG21lBC5OakHtT84pbDCek17W3cvDCdx65Ze5xNptiei/Dr4Td61Fa0beIOGfuhLnpZB5M8eHTBoOXBKcTPSc1X/EKyazqU9A5tT7a2zVxI5Mi/pZdaBZzH2muOPKLLmh54GMi1flnzYlQTUPBwrGk8sRj7V706Qg3SWtfKxv/3gmeBn7mNV/1YlbeNOVUdVVPE="
 }
 
 resource "aws_security_group" "demoaccess" {
@@ -37,10 +37,31 @@ resource "aws_security_group" "demoaccess" {
 	}
 }
 
-resource "aws_instance" "kubernetes" {
-  for_each = toset(["control", "worker1", "worker2"])
+resource "aws_instance" "kubernetes-main" {
+  for_each = toset(["control"])
+  
+  ami = local.ami_id
+  instance_type = "t2.micro"
+  associate_public_ip_address = "true"
+  vpc_security_group_ids =[aws_security_group.demoaccess.id]
+  key_name = local.key_name
 
-  #host_id = "${each.key}"
+  tags = {
+    Name = "${each.key}"
+  }
+
+  connection {
+    type = "ssh"
+    host = self.public_ip
+    user = local.ssh_user
+    private_key = file(local.private_key_path)
+    timeout = "4m"
+  } 
+
+}
+
+resource "aws_instance" "kubernetes-worker" {
+  for_each = toset(["worker1", "worker2"])
   
   ami = local.ami_id
   instance_type = "t2.micro"
@@ -60,11 +81,6 @@ resource "aws_instance" "kubernetes" {
     timeout = "4m"
   }
 
-  provisioner "remote-exec" {
-    inline = [
-      "hostname"
-    ]
-  }
 
   # Remotely execute commands to install Java, Python, Jenkins
   /* provisioner "remote-exec" {
@@ -82,26 +98,24 @@ resource "aws_instance" "kubernetes" {
     ]
   } */
   
-  provisioner "local-exec" {
+/*   provisioner "local-exec" {
     command = "echo ${self.public_ip} >> myhosts" 
-  }
-
-  #provisioner "local-exec" {
-  #  command = "ansible-playbook -i myhosts --user ${local.ssh_user} --private-key ${local.private_key_path} playbook.yml" 
-  #}
+  } */
+  
 
 }
 # generate inventory file for Ansible
 resource "local_file" "hosts_cfg" {
   content = templatefile("${path.module}/hosts.tpl",
     {
-      control_nodes = values(aws_instance.kubernetes)[*].public_ip
-      worker_nodes = values(aws_instance.kubernetes)[*].public_ip
+      control_nodes = values(aws_instance.kubernetes-main)[*].public_ip
+      worker_nodes = values(aws_instance.kubernetes-worker)[*].public_ip
     }
   )
   filename = "../ansible/inventory/hosts.cfg"
 
-  depends_on = [
-    aws_instance.kubernetes
-  ]
+  provisioner "local-exec" {
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${local_file.hosts_cfg.filename} --user ${local.ssh_user} --private-key ${local.private_key_path} ../ansible/playbook.yaml"
+  } 
 }
+
