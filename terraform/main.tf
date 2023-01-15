@@ -1,6 +1,6 @@
 locals {
   ami_id = "ami-09e67e426f25ce0d7"
-  vpc_id = "vpc-05f5f5ac8de80a92a"
+  vpc_id = "vpc-03be3295932ebe1d3"
   ssh_user = "ubuntu"
   key_name = "Demokey"
   private_key_path = "/Users/toshmickler/projects/capstone/terraform/Demokey.pem"
@@ -8,9 +8,9 @@ locals {
 
 provider "aws" {
   region     = "us-east-1"
-  access_key = "ASIA3NGD24IXMFFYDGMH"
-  secret_key = "Le/CpuRok0bbxLyVFuVMckT0ZpaJvufuurgxLXLH"
-  token = "FwoGZXIvYXdzEJr//////////wEaDMlvJfs+fPgmQGdOlyKzAWhSc2GAI1OKzrn8RlyQ7YTDa9XEUj4AuWOx/Y1sYEVFygR4sTfcvHW3Zd18Io4iCZBIytGM79DlJ6F+FkDHTZk0NpRbpfxER5x9NvRgx7JVrbhDrKzMQG21lBC5OakHtT84pbDCek17W3cvDCdx65Ze5xNptiei/Dr4Td61Fa0beIOGfuhLnpZB5M8eHTBoOXBKcTPSc1X/EKyazqU9A5tT7a2zVxI5Mi/pZdaBZzH2muOPKLLmh54GMi1flnzYlQTUPBwrGk8sRj7V706Qg3SWtfKxv/3gmeBn7mNV/1YlbeNOVUdVVPE="
+  access_key = "ASIA3NGD24IXH7XJP5HA"
+  secret_key = "KRhUaVNuiZmfr+WUPbeT70EEAq3U2JNxs1fw9y8J"
+  token = "FwoGZXIvYXdzEL7//////////wEaDFb5gfmyGHNqjPbLOSKzATOzObglwMzrig/ngJC2bMNunBTCH+VHM/tpUretZivIxdhFoNIPCZmIt3lMfsfxHES2QLur8xyLQPEHM28AcqyhaUdBFraL3cUwTi6kQ3NEwXoQdfmHswXTTivKYvAZ5D0uVIU/nHjOlBVsdld6zgTTa/SFxMgDr9zYdTR87o1YVdXM0459coZUM9/tRmtjHPqZTM3cdLOMUDXk/asmVZnfScCZppseZ7iUrH8pK7FC9TKZKMXtj54GMi2m1Z9WSsakPc9wPczF6oBxb8QmIEPl8CgLRvKm9pZeU+AjO2WDLhFH7WSvo4w="
 }
 
 resource "aws_security_group" "demoaccess" {
@@ -41,7 +41,7 @@ resource "aws_instance" "kubernetes-main" {
   for_each = toset(["control"])
   
   ami = local.ami_id
-  instance_type = "t2.micro"
+  instance_type = "t3.micro"
   associate_public_ip_address = "true"
   vpc_security_group_ids =[aws_security_group.demoaccess.id]
   key_name = local.key_name
@@ -115,7 +115,7 @@ resource "local_file" "hosts_cfg" {
   filename = "../ansible/inventory/hosts.cfg"
 
   provisioner "local-exec" {
-    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${local_file.hosts_cfg.filename} --user ${local.ssh_user} --private-key ${local.private_key_path} ../ansible/playbook.yaml"
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${local_file.hosts_cfg.filename} --user ${local.ssh_user} --private-key ${local.private_key_path} ../ansible/master-playbook.yaml"
   } 
 }
 
