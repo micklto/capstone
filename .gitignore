@@ -7,7 +7,7 @@ target
 *.tfstate
 *.tfstate.*
 
-myhosts
+output.json
 
 .DS_Store
 

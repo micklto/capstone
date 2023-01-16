@@ -2,8 +2,6 @@
 - name: Install Kubernetes on control nodes
   hosts: control_nodes
   become: true
-  vars:
-    master_hostname: k8s-master
   tasks:
     - name: Apt update and apt upgrade, install packages
       ansible.builtin.apt:
@@ -16,7 +14,7 @@
         state: latest
         force_apt_get: true
     - name: Install packages that allow apt to be used over HTTPS
-      apt:
+      ansible.builtin.apt:
         name: "{{ packages }}"
         state: present
         update_cache: true
@@ -30,7 +28,7 @@
           - gnupg-agent
           - software-properties-common
     - name: Add an apt signing key for Docker
-      apt_key:
+      ansible.builtin.apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
     - name: Print the Ubuntu distro variables
@@ -38,12 +36,12 @@
         msg: "{{ ansible_distribution }} {{ ansible_distribution_release }} {{
           ansible_distribution_version }}"
     - name: Add apt repository for stable version
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{
           ansible_distribution_release }} stable
         state: present
     - name: Install docker and its dependecies
-      apt:
+      ansible.builtin.apt:
         name: "{{ packages }}"
         state: present
         update_cache: true
@@ -55,7 +53,7 @@
       notify:
         - docker status
     - name: Remove swapfile from /etc/fstab
-      mount:
+      ansible.posix.mount:
         name: "{{ item }}"
         fstype: swap
         state: absent
@@ -66,16 +64,16 @@
       ansible.builtin.command: swapoff -a
       when: ansible_swaptotal_mb > 0
     - name: Add an apt signing key for Kubernetes
-      apt_key:
+      ansible.builtin.apt_key:
         url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
         state: present
     - name: Adding apt repository for Kubernetes
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
         state: present
         filename: kubernetes.list
     - name: Install Kubernetes binaries
-      apt:
+      ansible.builtin.apt:
         name: "{{ packages }}"
         state: present
         update_cache: true
@@ -84,27 +82,74 @@
           - kubelet
           - kubeadm
           - kubectl
+
     - name: Print all available facts
       ansible.builtin.debug:
         var: ansible_facts
+
     - name: Print ipv4 address
       ansible.builtin.debug:
         msg: "{{ ansible_default_ipv4.address }}"
+
     - name: Configure node ip
       lineinfile:
         path: /etc/default/kubelet
         line: KUBELET_EXTRA_ARGS=--node-ip={{ ansible_default_ipv4.address }}
-        create: yes
+        create: true
+
     - name: Restart kubelet
-      service:
+      ansible.builtin.service:
         name: kubelet
-        daemon_reload: yes
+        # unspported
+        # daemon_reload: true
         state: restarted
+
+    # https://github.com/containerd/containerd/issues/4581
+    - name: Remove file (delete file) config.toml
+      ansible.builtin.file:
+        path: /etc/containerd/config.toml
+        state: absent
+
+    - name: Restart containerd after removing config.toml
+      ansible.builtin.service:
+        name: containerd
+        state: restarted
+
     - name: Initialize the Kubernetes cluster using kubeadm
-      command: kubeadm init --apiserver-advertise-address='{{
-        ansible_default_ipv4.address }}' --apiserver-cert-extra-sans='{{
-        ansible_default_ipv4.address }}' --node-name '{{ master_hostname }}'
-        --pod-network-cidr=172.31.0.0/16
+      ansible.builtin.command: kubeadm init --ignore-preflight-errors=NumCPU,Mem
+
+    # - name: Setup kubeconfig for current(ansible?) user
+    #  ansible.builtin.command: "{{ item }}"
+    #  with_items:
+    #  - mkdir -p $HOME/.kube
+    #  - cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+    #  - chown $(id -u):$(id -g) $HOME/.kube/config
+
+    - name: Create .kube directory
+      ansible.builtin.file:
+        path: "{{ lookup('ansible.builtin.env', 'HOME') }}/.kube"
+        state: directory
+        mode: '0755'
+
+    - name: Copy addmin.conf to $HOME/.kube/config
+      ansible.builtin.copy:
+        remote_src: /etc/kubernetes/admin.conf
+        dest: "{{ lookup('ansible.builtin.env', 'HOME') }}/.kube/config"
+        owner: ubuntu
+        group: ubuntu
+        mode: '0640'
+
+    - name: Install calico pod network
+      become: false
+      ansible.builtin.command: kubectl create -f https://docs.projectcalico.org/v3.4/getting-started/kubernetes/installation/hosted/calico.yaml
+
+    - name: Generate join command
+      ansible.builtin.command: kubeadm token create --print-join-command
+      register: join_command
+
+    - name: Copy join command to local file
+      local_action: copy content="{{ join_command.stdout_lines[0] }}" dest="./join-command"
+
   handlers:
     - name: docker status
       service: name=docker state=started

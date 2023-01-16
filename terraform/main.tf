@@ -1,6 +1,6 @@
 locals {
   ami_id = "ami-09e67e426f25ce0d7"
-  vpc_id = "vpc-03be3295932ebe1d3"
+  vpc_id = "vpc-06fa01b45bf396242"
   ssh_user = "ubuntu"
   key_name = "Demokey"
   private_key_path = "/Users/toshmickler/projects/capstone/terraform/Demokey.pem"
@@ -8,9 +8,9 @@ locals {
 
 provider "aws" {
   region     = "us-east-1"
-  access_key = "ASIA3NGD24IXH7XJP5HA"
-  secret_key = "KRhUaVNuiZmfr+WUPbeT70EEAq3U2JNxs1fw9y8J"
-  token = "FwoGZXIvYXdzEL7//////////wEaDFb5gfmyGHNqjPbLOSKzATOzObglwMzrig/ngJC2bMNunBTCH+VHM/tpUretZivIxdhFoNIPCZmIt3lMfsfxHES2QLur8xyLQPEHM28AcqyhaUdBFraL3cUwTi6kQ3NEwXoQdfmHswXTTivKYvAZ5D0uVIU/nHjOlBVsdld6zgTTa/SFxMgDr9zYdTR87o1YVdXM0459coZUM9/tRmtjHPqZTM3cdLOMUDXk/asmVZnfScCZppseZ7iUrH8pK7FC9TKZKMXtj54GMi2m1Z9WSsakPc9wPczF6oBxb8QmIEPl8CgLRvKm9pZeU+AjO2WDLhFH7WSvo4w="
+  access_key = "ASIA3NGD24IXA5QKBMYM"
+  secret_key = "IpqoBS2C6jWMuI8s46wLrI24MhUmLpM6M2WhFBjq"
+  token = "FwoGZXIvYXdzEMn//////////wEaDFtdICB/Bzd7LbLcMSKzAeUO6OyxiyJRSwfd2US84x7DKcWhqC6ct8W0rDXip0i/EApCTRc6gnxXfz3+3ud2xSb8w4BnO9x3kv6DfByC60BsIubEGTT1saldIUfrDleYp2RtweYc/vQI1ak8Ohgb3uE9EyDjtgXJbq+3jtOw0/9iyIvdQzQqVZieoM/VQx69EX7dm24OBtoHzSSDgsRQrpYRFnxElajzxyEDtVGBEhM+uZzH2AGk7hHMa5/3d6EUjSCCKOCOkp4GMi1f2w56XwtKSt0f4pCdRbLk95xOvqP2iA6+2kOtimjfCDVeUtAhNBzEoB1kwJo="
 }
 
 resource "aws_security_group" "demoaccess" {
@@ -64,7 +64,7 @@ resource "aws_instance" "kubernetes-worker" {
   for_each = toset(["worker1", "worker2"])
   
   ami = local.ami_id
-  instance_type = "t2.micro"
+  instance_type = "t3.micro"
   associate_public_ip_address = "true"
   vpc_security_group_ids =[aws_security_group.demoaccess.id]
   key_name = local.key_name

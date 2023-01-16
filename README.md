@@ -13,8 +13,22 @@ Given that online shopping experiences continue to evolve as per customer expect
 ## GitHub
 >All source is located in DockerHub Capstone Project, [https://github.com/micklto/capstone](https://github.com/micklto/capstone)
 
+## DockerHub
+>Repository repository for the PG DO - DevOps Capstone Project, [https://hub.docker.com/repository/docker/dockertmickler/capstone](https://hub.docker.com/repository/docker/dockertmickler/capstone)
+
 ## Application Development
-### Define steps for building java
+### Define steps for building Spring Boot Application
+
+```bash
+./mvnw install 
+./mvnw ./mvnw spring-boot:build-image
+```
+
+### Steps to push to DockerHub
+```bash
+docker tag capstone:0.0.1-SNAPSHOT dockertmickler/capstone:0.0.1
+docker push dockertmickler/capstone:0.0.1
+```
 
 ### Project and Tester Details
 ### AWS
@@ -27,9 +41,11 @@ Log into AWS Web Console
  - Create KeyPair called ```Demokey```
     - Ddownload ```Demokey.pem``` and place it in the ```terraform``` directory
     - Terraform ensures that the user is the only one with permissions to this key.  Issue the following command:
-    >chmod 400 Demokey.pem
+    ```bash
+    chmod 400 Demokey.pem
+    ```
 
-Pull details from the AWS API Access
+Pull details from the AWS API Access page
 
 ![AWS API Access](/img/AWSApiAccess.png "AWS API Access")
 - Access key
@@ -74,5 +90,29 @@ NOTES:
 - Understand Private IP and CIDR for the one command that sets things up.
 - Move to Ansible Role
 - Fully document project for delivery
+
+```bash
+<project>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <image>
+                        <name>example.com/library/${project.artifactId}</name>
+                    </image>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+or
+
+```bash
+mvn spring-boot:build-image -Dspring-boot.build-image.imageName=example.com/library/my-app:v1
+```
 
 
