@@ -1,1 +1,119 @@
 ---
+- name: Install Kubernetes on worker_nodesansib
+  hosts: worker_nodes
+  become: true
+  tasks:
+    - name: Apt update and apt upgrade, install packages
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: true
+    - name: Update to use aptitude
+      ansible.builtin.apt:
+        name: aptitude
+        update_cache: true
+        state: latest
+        force_apt_get: true
+    - name: Install packages that allow apt to be used over HTTPS
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: true
+      vars:
+        packages:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - zip
+          - unzip
+          - gnupg-agent
+          - software-properties-common
+    - name: Add an apt signing key for Docker
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+    - name: Print the Ubuntu distro variables
+      ansible.builtin.debug:
+        msg: "{{ ansible_distribution }} {{ ansible_distribution_release }} {{
+          ansible_distribution_version }}"
+    - name: Add apt repository for stable version
+      ansible.builtin.apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{
+          ansible_distribution_release }} stable
+        state: present
+    - name: Install docker and its dependecies
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: true
+      vars:
+        packages:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+      notify:
+        - docker status
+    - name: Remove swapfile from /etc/fstab
+      ansible.posix.mount:
+        name: "{{ item }}"
+        fstype: swap
+        state: absent
+      with_items:
+        - swap
+        - none
+    - name: Disable swap
+      ansible.builtin.command: swapoff -a
+      when: ansible_swaptotal_mb > 0
+    - name: Add an apt signing key for Kubernetes
+      ansible.builtin.apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+    - name: Adding apt repository for Kubernetes
+      ansible.builtin.apt_repository:
+        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+        filename: kubernetes.list
+    - name: Install Kubernetes binaries
+      ansible.builtin.apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: true
+      vars:
+        packages:
+          - kubelet
+          - kubeadm
+          - kubectl
+    - name: Print all available facts
+      ansible.builtin.debug:
+        var: ansible_facts
+    - name: Print ipv4 address
+      ansible.builtin.debug:
+        msg: "{{ ansible_default_ipv4.address }}"
+    - name: Configure node ip
+      lineinfile:
+        path: /etc/default/kubelet
+        line: KUBELET_EXTRA_ARGS=--node-ip=172.31.14.72
+        create: true
+    - name: Restart kubelet
+      ansible.builtin.service:
+        name: kubelet
+        state: restarted
+    # https://github.com/containerd/containerd/issues/4581
+    - name: Remove file (delete file) config.toml
+      ansible.builtin.file:
+        path: /etc/containerd/config.toml
+        state: absent
+
+    - name: Restart containerd after removing config.toml
+      ansible.builtin.service:
+        name: containerd
+        state: restarted        
+    - name: Copy the join command to server location
+      ansible.builtin.copy:
+        src: join-command
+        dest: /tmp/join-command.sh
+        mode: "0777"
+    - name: Join the node to cluster
+      ansible.builtin.command: sh /tmp/join-command.sh
+  handlers:
+    - name: docker status
+      service: name=docker state=started

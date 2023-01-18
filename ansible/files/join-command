@@ -1,0 +1,1 @@
+kubeadm join 172.31.14.72:6443 --ignore-preflight-errors=NumCPU,Mem --token ouj4tk.uf2mk99dyz4yoaon --discovery-token-ca-cert-hash sha256:5065138f5dfcb82583c05b9733ccb15e5c70c74d2598a482774698554f269e13

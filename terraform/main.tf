@@ -1,6 +1,6 @@
 locals {
   ami_id = "ami-09e67e426f25ce0d7"
-  vpc_id = "vpc-06fa01b45bf396242"
+  vpc_id = "vpc-084388df05c673a3e"
   ssh_user = "ubuntu"
   key_name = "Demokey"
   private_key_path = "/Users/toshmickler/projects/capstone/terraform/Demokey.pem"
@@ -8,9 +8,9 @@ locals {
 
 provider "aws" {
   region     = "us-east-1"
-  access_key = "ASIA3NGD24IXA5QKBMYM"
-  secret_key = "IpqoBS2C6jWMuI8s46wLrI24MhUmLpM6M2WhFBjq"
-  token = "FwoGZXIvYXdzEMn//////////wEaDFtdICB/Bzd7LbLcMSKzAeUO6OyxiyJRSwfd2US84x7DKcWhqC6ct8W0rDXip0i/EApCTRc6gnxXfz3+3ud2xSb8w4BnO9x3kv6DfByC60BsIubEGTT1saldIUfrDleYp2RtweYc/vQI1ak8Ohgb3uE9EyDjtgXJbq+3jtOw0/9iyIvdQzQqVZieoM/VQx69EX7dm24OBtoHzSSDgsRQrpYRFnxElajzxyEDtVGBEhM+uZzH2AGk7hHMa5/3d6EUjSCCKOCOkp4GMi1f2w56XwtKSt0f4pCdRbLk95xOvqP2iA6+2kOtimjfCDVeUtAhNBzEoB1kwJo="
+  access_key = "ASIA3NGD24IXCMQT2S77"
+  secret_key = "QBV/qWp/CnjHvl5a0qMNwMQNhKzSdJlGU1icvkx2"
+  token = "FwoGZXIvYXdzEOL//////////wEaDBQiPRy7NEMsRKHnoSKzAa72mK8lSqMoOKdDMHoYW4oDw0JwFESODuyGWWkWzZQUEf4PNb0W7fgneaEftShUZNUMpFukGWU5ZY4Fs28Nc4kl0umSOahM1XKPs1fFg3C7FVfBLSlvmpb1M4+993oYPibHSmct1brqGq/vEOWR74tuwEUZ4h95EBBVPRSuXO7/kcmNqfGrITjjN5Y4uhe5pTVl387+TR7XOpE0uDubjBTX6YHqB3smg/asl8pOg8KHqF2TKLjgl54GMi2PajepHPLNQbSCj6WTGZbLida8/oXq+TVi0fxRKkWA+APtmisnLSP4iitpbaw="
 }
 
 resource "aws_security_group" "demoaccess" {
@@ -80,28 +80,6 @@ resource "aws_instance" "kubernetes-worker" {
     private_key = file(local.private_key_path)
     timeout = "4m"
   }
-
-
-  # Remotely execute commands to install Java, Python, Jenkins
-  /* provisioner "remote-exec" {
-    inline = [
-      "sudo apt update && upgrade",
-      "sudo apt -y install apt-transport-https ca-certificates curl gnupg-agent software-properties-common",
-      "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/docker-archive-keyring.gpg",
-      "sudo add-apt-repository \"deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable\"",
-      "sudo apt update",
-      "sudo apt -y install docker-ce docker-ce-cli containerd.io",
-      "sudo usermod -aG docker $USER",
-      "newgrp docker",
-      "docker -version"
-     
-    ]
-  } */
-  
-/*   provisioner "local-exec" {
-    command = "echo ${self.public_ip} >> myhosts" 
-  } */
-  
 
 }
 # generate inventory file for Ansible

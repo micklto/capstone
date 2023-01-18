@@ -118,30 +118,17 @@
     - name: Initialize the Kubernetes cluster using kubeadm
       ansible.builtin.command: kubeadm init --ignore-preflight-errors=NumCPU,Mem
 
-    # - name: Setup kubeconfig for current(ansible?) user
-    #  ansible.builtin.command: "{{ item }}"
-    #  with_items:
-    #  - mkdir -p $HOME/.kube
-    #  - cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-    #  - chown $(id -u):$(id -g) $HOME/.kube/config
-
-    - name: Create .kube directory
-      ansible.builtin.file:
-        path: "{{ lookup('ansible.builtin.env', 'HOME') }}/.kube"
-        state: directory
-        mode: '0755'
-
-    - name: Copy addmin.conf to $HOME/.kube/config
-      ansible.builtin.copy:
-        remote_src: /etc/kubernetes/admin.conf
-        dest: "{{ lookup('ansible.builtin.env', 'HOME') }}/.kube/config"
-        owner: ubuntu
-        group: ubuntu
-        mode: '0640'
+    - name: Setup kubeconfig for current(ansible?) user
+      ansible.builtin.command: "{{ item }}"
+      with_items:
+        - mkdir -p $HOME/.kube
+        - cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+        - chown $(id -u):$(id -g) $HOME/.kube/config
 
     - name: Install calico pod network
       become: false
-      ansible.builtin.command: kubectl create -f https://docs.projectcalico.org/v3.4/getting-started/kubernetes/installation/hosted/calico.yaml
+      ansible.builtin.command: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
+
 
     - name: Generate join command
       ansible.builtin.command: kubeadm token create --print-join-command
@@ -149,6 +136,8 @@
 
     - name: Copy join command to local file
       local_action: copy content="{{ join_command.stdout_lines[0] }}" dest="./join-command"
+
+      # TODO - need to do text replacement on kubeadm line in join-command to add the --ignore-preflight-errors
 
   handlers:
     - name: docker status

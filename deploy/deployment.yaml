@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: capstone
+  labels:
+    app: capstone
+spec:
+  replicas: 2
+  selector:
+      matchLabels:
+        app: capstone
+  template:
+      metadata:
+        labels:
+            app: capstone
+      spec:
+        containers:
+        - name: capstone 
+          image: dockertmickler/capstone:0.0.1
+          ports:
+          - containerPort: 8080
+          env:
+              - name: SPRING_DATASOURCE_PASSWORD
+                value: postgres
+              - name: SPRING_DATASOURCE_URL
+                value: jdbc:postgresql://postgres:5432/postgresdb?useSSL=false
+              - name: SPRING_DATASOURCE_USERNAME
+                value: postgres
+
