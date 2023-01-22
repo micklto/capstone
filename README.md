@@ -33,7 +33,13 @@ Maven is used to build the applicaiton and test source code.  It has a built in 
 - ```CapstoneApplicationTests.java``` - Tests to ensure the Spring context loads
 - ```HelloWorldConfigurationTests.java``` - Tests to see that the web server runs and responds with appropriate error codes.
 
-JMeter, Postman, or K6 Stress Testing
+#### K6 Stress Testing
+>On MacOS, use command ````bash brew install k6````
+
+````bash
+k6 run script.js
+````
+
 ### DockerHub
 
 >DockerHub will store the Spring Boot application and the PostgreSQL images used in the Kubernetes deployment.
@@ -73,10 +79,11 @@ Pull details from the AWS API Access page
 ### Terraform
 
 #### Files and Algorithms
-- ```main.tf```
-- ```Demokey.pem```
-- ```hosts.tpl```
-- ```variables.tf```
+- ```main.tf``` - Entrypoint IaC script for terraform
+- ```Demokey.pem``` - Downloaded Key Pair from AWS
+- ```hosts.tpl``` - template file for generating an Ansible configuration
+- ```ansiblevars.tpl``` - template file for generating an Ansible variables
+- ```variables.tf``` - main file for Terraform variable definition
 #### Terraform Commands
 Commands for Infrastructure Creation:
 ```bash
@@ -87,11 +94,45 @@ terraform apply -auto-approve
 Commands for Infrastructure Destruction:
 ```bash
 terraform destroy
-```
+````
+#### Ansible
 
+******* TODO ************
+Currently have to run the worker nodes ansible once the control node is finished.  Need to hook that up.
 
 ### Kubernetes
 
+#### Files in ```deploy``` directory
+- ```postgres-config.yaml``` - Congiguration for PostgreSQL deployment
+- ```postgres-pvc-pv.yaml``` - Persistent Volume Claims for PostgreSQL deployment
+- ```postgres-deployment.yaml``` - PostgreSQL deployment
+- ```postgres-service.yaml``` - Service creation for PostgreSQL deployment
+- ```deployment.yaml``` - Deploy ```capstone``` project
+- ```capstone-service.yaml``` - Expose ```capstone``` project as a service
+
+>Install Postgres server with the following commands
+```bash
+kubectl apply -f postgres-config.yaml
+kubectl apply -f postgres-pvc-pv.yaml
+kubectl apply -f postgres-deployment.yaml
+kubectl apply -f postgres-service.yaml
+```
+>Deploy ```capstone``` application
+````bash
+kubectl apply -f deployment.yaml
+kubectl apply -f capstone-service.yaml
+````
+
+#### Expose ```capstone``` application as a public service
+````bash
+kubectl expose deployment capstone --type=LoadBalancer
+````
+
+#### Horizontal autoscale ```capstone``` deployment
+````bash
+kubectl autoscale deployment capstone --cpu-percent=50 --min=2 --max=10
+````
+#### Metrics server
 ## Conclusion
 
 Your conclusion on enhancing the application and defining the USPs (Unique Selling Points)
@@ -106,13 +147,13 @@ NOTES:
 
 
 ## TODO
-
-- Create kubernetes yaml to deploy application
+- Do we need to install the metrics server ??????????
 - Create autoscaling of app
 - figure out how to stress the application to make it scale (jmeter may be what I want to do)
 - Understand Private IP and CIDR for the one command that sets things up.
 - Move to Ansible Role - incorporate master-playbook.yaml and node-playbook.yaml
 - Fully document project for delivery
+- REMOVE ALL TODO Tags in project
 
 ```bash
 <project>

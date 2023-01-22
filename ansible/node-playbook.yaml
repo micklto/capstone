@@ -1,7 +1,9 @@
 ---
-- name: Install Kubernetes on worker_nodesansib
+- name: Install Kubernetes on worker_nodes
   hosts: worker_nodes
   become: true
+  vars_files:
+    - vars/default.yml  
   tasks:
     - name: Apt update and apt upgrade, install packages
       ansible.builtin.apt:
@@ -13,6 +15,7 @@
         update_cache: true
         state: latest
         force_apt_get: true
+
     - name: Install packages that allow apt to be used over HTTPS
       ansible.builtin.apt:
         name: "{{ packages }}"
@@ -27,6 +30,7 @@
           - unzip
           - gnupg-agent
           - software-properties-common
+
     - name: Add an apt signing key for Docker
       ansible.builtin.apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
@@ -85,13 +89,11 @@
     - name: Print all available facts
       ansible.builtin.debug:
         var: ansible_facts
-    - name: Print ipv4 address
-      ansible.builtin.debug:
-        msg: "{{ ansible_default_ipv4.address }}"
+
     - name: Configure node ip
       lineinfile:
         path: /etc/default/kubelet
-        line: KUBELET_EXTRA_ARGS=--node-ip=172.31.14.72
+        line: KUBELET_EXTRA_ARGS=--node-ip="{{ master_node_ip }}"
         create: true
     - name: Restart kubelet
       ansible.builtin.service:
@@ -106,14 +108,21 @@
     - name: Restart containerd after removing config.toml
       ansible.builtin.service:
         name: containerd
-        state: restarted        
+        state: restarted
+
     - name: Copy the join command to server location
       ansible.builtin.copy:
         src: join-command
         dest: /tmp/join-command.sh
         mode: "0777"
+      tags:
+        - join
+
     - name: Join the node to cluster
       ansible.builtin.command: sh /tmp/join-command.sh
+      tags:
+        - join
+
   handlers:
     - name: docker status
       service: name=docker state=started

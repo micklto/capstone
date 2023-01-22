@@ -1,0 +1,1 @@
+kubeadm join 172.31.9.120:6443 --token bqxldw.to3gzybw67cpntxv --discovery-token-ca-cert-hash sha256:2611d5f54d31985e0d533b2a1662317447910f62de4cbab3dbd54191f90658d9 --v=5

@@ -1,6 +1,6 @@
 locals {
   ami_id = "ami-09e67e426f25ce0d7"
-  vpc_id = "vpc-084388df05c673a3e"
+  vpc_id = "vpc-0b472ec5e11139336"
   ssh_user = "ubuntu"
   key_name = "Demokey"
   private_key_path = "/Users/toshmickler/projects/capstone/terraform/Demokey.pem"
@@ -8,9 +8,9 @@ locals {
 
 provider "aws" {
   region     = "us-east-1"
-  access_key = "ASIA3NGD24IXCMQT2S77"
-  secret_key = "QBV/qWp/CnjHvl5a0qMNwMQNhKzSdJlGU1icvkx2"
-  token = "FwoGZXIvYXdzEOL//////////wEaDBQiPRy7NEMsRKHnoSKzAa72mK8lSqMoOKdDMHoYW4oDw0JwFESODuyGWWkWzZQUEf4PNb0W7fgneaEftShUZNUMpFukGWU5ZY4Fs28Nc4kl0umSOahM1XKPs1fFg3C7FVfBLSlvmpb1M4+993oYPibHSmct1brqGq/vEOWR74tuwEUZ4h95EBBVPRSuXO7/kcmNqfGrITjjN5Y4uhe5pTVl387+TR7XOpE0uDubjBTX6YHqB3smg/asl8pOg8KHqF2TKLjgl54GMi2PajepHPLNQbSCj6WTGZbLida8/oXq+TVi0fxRKkWA+APtmisnLSP4iitpbaw="
+  access_key = "ASIA3NGD24IXJR3CFFAX"
+  secret_key = "WFm8AE4ee29DdUzcWqyDzREPBkQSkdGYTmlVMDHI"
+  token = "FwoGZXIvYXdzEFYaDEUsh1dQbIP5DnBWWCKzAfb/lyFzZRhwyEISUMOIfzKwr6aiG5WiXYGi9jaY5dIW2CWNcEipURFxFwCWRnakAfPgMb5PtmNO+V9ZGx9EbGZNzs42Zbj9DgoMufGiLb5a4wAfkiuGx1nUQTcG3fB8Y0HwNOHhniKTkkKzkw9qvcpf3dTMYLWr6uPMnpNUmKKRgHPt2r31na+Nr75Go81rEJ133twKqTm6GvisvizDNFZsywFbeJY3VkhDcsJqqi9qiw+lKJuNsZ4GMi2HGxbsU9+Opk1luAJgB/IpAQ5pMG13EgWAs0igweH22jjXFH3W8Kf58C0TC3g="
 }
 
 resource "aws_security_group" "demoaccess" {
@@ -82,6 +82,17 @@ resource "aws_instance" "kubernetes-worker" {
   }
 
 }
+
+# TODO - Need to wait until infrastructure is created before proceeding to run ansible
+# generate variable file for Ansible
+resource "local_file" "ansible_vars" {
+  content = templatefile("${path.module}/ansiblevars.tpl",
+    {
+      master_node = values(aws_instance.kubernetes-main)[0].private_ip
+    }
+  )
+  filename = "../ansible/vars/default.yaml"
+}
 # generate inventory file for Ansible
 resource "local_file" "hosts_cfg" {
   content = templatefile("${path.module}/hosts.tpl",
@@ -90,7 +101,7 @@ resource "local_file" "hosts_cfg" {
       worker_nodes = values(aws_instance.kubernetes-worker)[*].public_ip
     }
   )
-  filename = "../ansible/inventory/hosts.cfg"
+  filename = "../ansible/inventory/hosts.cfg" 
 
   provisioner "local-exec" {
     command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${local_file.hosts_cfg.filename} --user ${local.ssh_user} --private-key ${local.private_key_path} ../ansible/master-playbook.yaml"
