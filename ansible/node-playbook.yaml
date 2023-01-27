@@ -3,7 +3,7 @@
   hosts: worker_nodes
   become: true
   vars_files:
-    - vars/default.yml  
+    - vars/default.yaml
   tasks:
     - name: Apt update and apt upgrade, install packages
       ansible.builtin.apt:
@@ -35,10 +35,7 @@
       ansible.builtin.apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
-    - name: Print the Ubuntu distro variables
-      ansible.builtin.debug:
-        msg: "{{ ansible_distribution }} {{ ansible_distribution_release }} {{
-          ansible_distribution_version }}"
+
     - name: Add apt repository for stable version
       ansible.builtin.apt_repository:
         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{
@@ -86,9 +83,6 @@
           - kubelet
           - kubeadm
           - kubectl
-    - name: Print all available facts
-      ansible.builtin.debug:
-        var: ansible_facts
 
     - name: Configure node ip
       lineinfile:

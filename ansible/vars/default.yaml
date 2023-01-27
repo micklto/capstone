@@ -1,1 +1,2 @@
-master_node_ip: 172.31.3.127
+master_node_ip: 172.31.1.68
+pod_network_cidr: 172.31.0.0/16

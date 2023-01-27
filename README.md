@@ -16,6 +16,13 @@ Given that online shopping experiences continue to evolve as per customer expect
 ## DockerHub
 >Repository repository for the PG DO - DevOps Capstone Project, [https://hub.docker.com/repository/docker/dockertmickler/capstone](https://hub.docker.com/repository/docker/dockertmickler/capstone)
 
+## Assumptions
+
+#### Installed Tools
+- Git
+- Ansible
+- Terraform
+- JDK
 ## Application Development
 ### Spring Boot Application
 Application is called ```capstone``` and is a Spring Boot application that is deployed as a container.  It is dependant on a PostgreSQL datasource.  It will takes its paramaters through environment variables.
@@ -79,7 +86,16 @@ Pull details from the AWS API Access page
 ### Terraform
 
 #### Files and Algorithms
-- ```main.tf``` - Entrypoint IaC script for terraform
+- ```main.tf``` - Entrypoint IaC script for terraform. Sections listed below
+    - ```locals``` - local variable definition
+    - ```provider``` - aws provider
+    - ```resource``` - aws security group. Multiple ingress and an egress defined
+    - ```resource``` - aws instance. Control node defined with ssh connection
+    - ```resource``` - aws instance. worker nodes defined with ssh connection
+    - ```data``` - aws vpc. Allows for query of CIDR
+    - ```resource``` - local file. Creates Ansible variable file
+    - ```resource``` - local file. Creates Ansible hosts file
+    - ```provisioner``` - local exec. Runs ansible after infrastructure is created
 - ```Demokey.pem``` - Downloaded Key Pair from AWS
 - ```hosts.tpl``` - template file for generating an Ansible configuration
 - ```ansiblevars.tpl``` - template file for generating an Ansible variables
@@ -93,10 +109,20 @@ terraform apply -auto-approve
 ```
 Commands for Infrastructure Destruction:
 ```bash
-terraform destroy
+terraform destroy -auto-approve
 ````
 #### Ansible
+>Install prerequisites for [kubernetes.core.k8s module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html#ansible-collections-kubernetes-core-k8s-module-requirements)
 
+````bash
+brew install json-c
+brew install pyyaml
+ansible-galaxy collection install kubernetes.core
+````
+##### Roles
+
+###### master
+###### worker
 ******* TODO ************
 Currently have to run the worker nodes ansible once the control node is finished.  Need to hook that up.
 
@@ -116,12 +142,14 @@ kubectl apply -f postgres-config.yaml
 kubectl apply -f postgres-pvc-pv.yaml
 kubectl apply -f postgres-deployment.yaml
 kubectl apply -f postgres-service.yaml
-```
+````
 >Deploy ```capstone``` application
+
 ````bash
 kubectl apply -f deployment.yaml
 kubectl apply -f capstone-service.yaml
 ````
+
 
 #### Expose ```capstone``` application as a public service
 ````bash
@@ -133,6 +161,11 @@ kubectl expose deployment capstone --type=LoadBalancer
 kubectl autoscale deployment capstone --cpu-percent=50 --min=2 --max=10
 ````
 #### Metrics server
+
+>Verify ```capstone``` application in web browser
+
+- http://localhost:8080 - Basic web appliccation
+- http://localhost:8080/demo/all - View all users
 ## Conclusion
 
 Your conclusion on enhancing the application and defining the USPs (Unique Selling Points)
@@ -147,11 +180,21 @@ NOTES:
 
 
 ## TODO
+- master runs through fine.  Running nodes works.  Can run kubectl get nodes but they aren't in a good state. 
+>Kubernetes check on the pods. 
+````bash
+ssh 
+kubectl get nodes -o wide
+kubectl describe pod <podname>
+shows cni not installed
+````
+- backup etcd
 - Do we need to install the metrics server ??????????
 - Create autoscaling of app
 - figure out how to stress the application to make it scale (jmeter may be what I want to do)
-- Understand Private IP and CIDR for the one command that sets things up.
 - Move to Ansible Role - incorporate master-playbook.yaml and node-playbook.yaml
+- Describe main sections of Terraform main.tf
+- Describe tasks in ansible playbooks.  Give them descriptive names.  Describe them in this doc
 - Fully document project for delivery
 - REMOVE ALL TODO Tags in project
 

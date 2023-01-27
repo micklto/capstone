@@ -3,12 +3,13 @@
   hosts: control_nodes
   become: true
   vars_files:
-    - vars/default.yml  
+    - vars/default.yaml
   tasks:
     - name: Apt update and apt upgrade, install packages
       ansible.builtin.apt:
         update_cache: true
         upgrade: true
+
     - name: Update to use aptitude
       ansible.builtin.apt:
         name: aptitude
@@ -33,10 +34,7 @@
       ansible.builtin.apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
-    - name: Print the Ubuntu distro variables
-      ansible.builtin.debug:
-        msg: "{{ ansible_distribution }} {{ ansible_distribution_release }} {{
-          ansible_distribution_version }}"
+
     - name: Add apt repository for stable version
       ansible.builtin.apt_repository:
         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu {{
@@ -94,7 +92,7 @@
         msg: "{{ ansible_default_ipv4.address }}"
 
     - name: Configure node ip
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/default/kubelet
         line: KUBELET_EXTRA_ARGS=--node-ip={{ ansible_default_ipv4.address }}
         create: true
@@ -120,7 +118,8 @@
     - name: Initialize the Kubernetes cluster using kubeadm
       ansible.builtin.command: kubeadm init --ignore-preflight-errors=NumCPU,Mem --apiserver-advertise-address='{{
         ansible_default_ipv4.address }}' --apiserver-cert-extra-sans='{{
-        ansible_default_ipv4.address }}' --pod-network-cidr=172.31.0.0/16
+        ansible_default_ipv4.address }}' --node-name '{{ ansible_hostname }}'
+        --pod-network-cidr='{{ pod_network_cidr }}'
 
     - name: Setup kubeconfig for current(ansible?) user
       ansible.builtin.command: "{{ item }}"
@@ -130,9 +129,30 @@
         - chown root:root $HOME/.kube/config
 
     - name: Install calico pod network
-      #become: false
       ansible.builtin.command: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
+      tags:
+        - calico
 
+    - name: Download custom-resources.yaml
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/custom-resources.yaml
+        dest: /tmp/custom-resources.yaml
+        mode: '0660'
+      tags:
+        - calico
+
+    - name: Replace with correct cidr
+      ansible.builtin.lineinfile:
+        path: /tmp/custom-resources.yaml
+        regexp: '^.*cidr: (.*)$'
+        line: "      cidr: {{ pod_network_cidr }}"
+      tags:
+        - calico
+
+    - name: Install calico custom resources
+      ansible.builtin.command: kubectl create -f /tmp/custom-resources.yaml
+      tags:
+        - calico
 
     - name: Generate join command
       ansible.builtin.command: kubeadm token create --print-join-command

@@ -1,0 +1,3 @@
+---
+- name: Install Postgres into kubernetes cluster
+  hosts: co

@@ -1,1 +1,0 @@
-kubeadm --ignore-preflight-errors=NumCPU,Mem join 172.31.0.32:6443 --token qwhiqa.of7isb0t0ui8t7ah --discovery-token-ca-cert-hash sha256:99bacc0a522dffc8078f1afa7fcc3eb2c6a04570b5c52ff38e767411b33c023d --v=5
