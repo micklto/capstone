@@ -1,2 +1,3 @@
 ---
 # defaults file for deployments
+app_namespace: capstone

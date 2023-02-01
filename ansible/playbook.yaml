@@ -17,7 +17,7 @@
   roles:
     - worker
 
-- name: Install K3s on worker_nodes
+- name: Deploy Postgres and capstone application
   hosts: control_nodes
   become: true
   roles:

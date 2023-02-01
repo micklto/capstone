@@ -88,7 +88,6 @@ Pull details from the AWS API Access page
 #### Files and Algorithms
 - ```main.tf``` - Entrypoint IaC script for terraform. Sections listed below
     - ```locals``` - local variable definition
-    - ```provider``` - aws provider
     - ```resource``` - aws security group. Multiple ingress and an egress defined
     - ```resource``` - aws instance. Control node defined with ssh connection
     - ```resource``` - aws instance. worker nodes defined with ssh connection
@@ -96,6 +95,7 @@ Pull details from the AWS API Access page
     - ```resource``` - local file. Creates Ansible variable file
     - ```resource``` - local file. Creates Ansible hosts file
     - ```provisioner``` - local exec. Runs ansible after infrastructure is created
+- ```provider.tf``` - Contains AWS provider
 - ```Demokey.pem``` - Downloaded Key Pair from AWS
 - ```hosts.tpl``` - template file for generating an Ansible configuration
 - ```ansiblevars.tpl``` - template file for generating an Ansible variables

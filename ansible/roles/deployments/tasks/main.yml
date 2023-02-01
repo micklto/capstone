@@ -11,20 +11,63 @@
   tags:
     - deploy
 
+- name: Create a k8s namespace
+  kubernetes.core.k8s:
+    name: "{{ app_namespace }}"
+    api_version: v1
+    kind: Namespace
+    state: present
+
 - name: Apply Postgres configuration
-  become: true
   kubernetes.core.k8s:
     state: present
-    src: /root/deploy/postgres-config.yml
+    src: /root/deploy/postgres-config.yaml
+    namespace: "{{ app_namespace }}"
   tags:
     - deploy
     - apply
 
-- name: Apply Postgres configuration
-  become: true
+- name: Apply Postgres Persistent Volume Claim
   kubernetes.core.k8s:
     state: present
-    src: /root/deploy/postgres-pvc-pv.yml
+    src: /root/deploy/postgres-pvc-pv.yaml
+    namespace: "{{ app_namespace }}"
   tags:
-    - deploy    
-    - apply   
+    - deploy
+    - apply
+
+- name: Apply Postgres deployment
+  kubernetes.core.k8s:
+    state: present
+    src: /root/deploy/postgres-deployment.yaml
+    namespace: "{{ app_namespace }}"
+  tags:
+    - deploy
+    - apply
+
+- name: Create Postgres Service
+  kubernetes.core.k8s:
+    state: present
+    src: /root/deploy/postgres-service.yaml
+    namespace: "{{ app_namespace }}"
+  tags:
+    - deploy
+    - apply
+
+- name: Create capstone deployment
+  kubernetes.core.k8s:
+    state: present
+    src: /root/deploy/deployment.yaml
+    namespace: "{{ app_namespace }}"
+  tags:
+    - deploy
+    - apply
+
+- name: Create capstone service
+  kubernetes.core.k8s:
+    state: present
+    src: /root/deploy/capstone-service.yaml
+    namespace: "{{ app_namespace }}"
+  tags:
+    - deploy
+    - apply
