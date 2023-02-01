@@ -1,40 +1,136 @@
 locals {
   ami_id = "ami-09e67e426f25ce0d7"
-  vpc_id = "vpc-0d74804362f22cf70"
+  vpc_id = "vpc-09b96c51e3fabd9cd"
   ssh_user = "ubuntu"
-  key_name = "Demokey"
-  private_key_path = "/Users/toshmickler/projects/capstone/terraform/Demokey.pem"
+  key_name = "mickltokey"
+  private_key_path = "/Users/toshmickler/projects/capstone/terraform/mickltokey.pem"
 }
 
-provider "aws" {
-  region     = "us-east-1"
-  access_key = "ASIA3NGD24IXNPNE55GJ"
-  secret_key = "4t9AFpYjpd2PzepVCgvbfu5/+bEKPH477o/TahCZ"
-  token = "FwoGZXIvYXdzENP//////////wEaDBFlwFDuR81fogAtJyKzAd6Be3+zTRAW8wPjEITySStl0ZSxpS/2XBfwunbndVfKJJdteRPADigTWEgDvRu9Mol+4AwrXu7IZScRTbPrN1gA9EI0F89ZPLWo1U/cm7sVL6rymT7EaERIXp761PRBRNsFZ21xmeh6FcFEGYYWZkUh+kZdRj7RletlF+xV/isdWCTQc5k2iiiD5JsSzlVqRbEtyLzkZR26a6JLwczKtqzg2NgLkNSP8/HUCgFl1SzYj8l9KLTIzJ4GMi3IAFyNylaJ+ULq00Q5smdFpPhZziyEPqLOaaVpg9TKP3WWesoVt0unaXILmI4="
-}
+
 
 resource "aws_security_group" "demoaccess" {
 	name   = "demoaccess"
 	vpc_id = local.vpc_id
 
   ingress {
-		from_port   = 22
-		to_port     = 22
-		protocol    = "tcp"
-		cidr_blocks = ["0.0.0.0/0"]
-	}
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   ingress {
-		from_port   = 80
-		to_port     = 80
-		protocol    = "tcp"
-		cidr_blocks = ["0.0.0.0/0"]
-	}
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+    ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  } 
   ingress {
-		from_port   = 6443
-		to_port     = 6443
-		protocol    = "tcp"
-		cidr_blocks = ["0.0.0.0/0"]
-	}
+    from_port   = 6443
+    to_port     = 6443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  } 
+
+   #Calico networking (BGP)
+   ingress {
+    from_port   = 179
+    to_port     = 179
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  } 
+
+   ingress {
+    from_port   = 2379
+    to_port     = 2379
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  } 
+
+  ingress {
+    from_port   = 2380
+    to_port     = 2380
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }  
+
+   ingress {
+    from_port   = 10250
+    to_port     = 10250
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  } 
+
+   ingress {
+    from_port   = 10259
+    to_port     = 10259
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }   
+
+   ingress {
+    from_port   = 10257
+    to_port     = 10257
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }      
+
+   #Calico networking with VXLAN enabled
+   #flannel networking (VXLAN)
+   ingress {
+    from_port   = 4789
+    to_port     = 4789
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  
+   #Calico networking with Typha enabled
+   ingress {
+    from_port   = 5473
+    to_port     = 5473
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }  
+   #Calico networking with IPv4 Wireguard enabled
+   ingress {
+    from_port   = 51820
+    to_port     = 51820
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+
+  #Calico networking with IPv6 Wireguard enabled
+  ingress {
+    from_port   = 51821
+    to_port     = 51821
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }  
+
+
+   #etcd datastore
+   ingress {
+    from_port   = 2379
+    to_port     = 2379
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  } 
+
+  # Allow all internal
+  ingress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    self = true
+  }  
   egress {
 		from_port   = 0
 		to_port     = 0
@@ -116,7 +212,7 @@ resource "local_file" "hosts_cfg" {
   filename = "../ansible/inventory/hosts.cfg" 
 
   provisioner "local-exec" {
-    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${local_file.hosts_cfg.filename} --user ${local.ssh_user} --private-key ${local.private_key_path} ../ansible/master-playbook.yaml -vvv"
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${local_file.hosts_cfg.filename} --user ${local.ssh_user} --private-key ${local.private_key_path} ../ansible/playbook.yaml -vvv"
   }
 }
 

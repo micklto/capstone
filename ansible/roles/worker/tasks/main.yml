@@ -1,2 +1,14 @@
 ---
 # tasks file for worker
+- name: Copy the join command to server location
+  ansible.builtin.copy:
+    src: join-command
+    dest: /tmp/join-command.sh
+    mode: "0777"
+  tags:
+    - join
+
+- name: Join the node to cluster
+  ansible.builtin.command: sh /tmp/join-command.sh
+  tags:
+    - join

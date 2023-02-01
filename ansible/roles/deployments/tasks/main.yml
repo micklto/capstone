@@ -1,0 +1,30 @@
+---
+# tasks file for deployments
+- name: Copy deploy directory to remote
+  become: true
+  ansible.builtin.copy:
+    src: ../../../../deploy
+    dest: /root
+    owner: root
+    group: root
+    mode: '0750'
+  tags:
+    - deploy
+
+- name: Apply Postgres configuration
+  become: true
+  kubernetes.core.k8s:
+    state: present
+    src: /root/deploy/postgres-config.yml
+  tags:
+    - deploy
+    - apply
+
+- name: Apply Postgres configuration
+  become: true
+  kubernetes.core.k8s:
+    state: present
+    src: /root/deploy/postgres-pvc-pv.yml
+  tags:
+    - deploy    
+    - apply   

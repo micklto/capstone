@@ -120,7 +120,7 @@ brew install pyyaml
 ansible-galaxy collection install kubernetes.core
 ````
 ##### Roles
-
+###### common
 ###### master
 ###### worker
 ******* TODO ************
@@ -188,6 +188,8 @@ kubectl get nodes -o wide
 kubectl describe pod <podname>
 shows cni not installed
 ````
+- install prerequisites for kubernetes ansible module on master nodes
+- copy of deployment goes to /home/ubuntu/deploy/deploy/*.yaml.  It should go under root I think
 - backup etcd
 - Do we need to install the metrics server ??????????
 - Create autoscaling of app

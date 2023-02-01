@@ -128,32 +128,29 @@
         - cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
         - chown root:root $HOME/.kube/config
 
-    - name: Install calico pod network
-      ansible.builtin.command: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/tigera-operator.yaml
-      tags:
-        - calico
 
-    - name: Download custom-resources.yaml
+    - name: Download kube-flannel.yaml
       ansible.builtin.get_url:
-        url: https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/custom-resources.yaml
-        dest: /tmp/custom-resources.yaml
-        mode: '0660'
+        url: https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+        dest: /tmp/kube-flannel.yaml
+        mode: '0760'
       tags:
-        - calico
+        - flannel
 
     - name: Replace with correct cidr
       ansible.builtin.lineinfile:
-        path: /tmp/custom-resources.yaml
-        regexp: '^.*cidr: (.*)$'
-        line: "      cidr: {{ pod_network_cidr }}"
+        path: /tmp/kube-flannel.yaml
+        regexp: '^.*"Network": (.*)$'
+        line: '      "Network": "{{ pod_network_cidr }}",'
+        mode: '0750'
       tags:
-        - calico
+        - flannel
 
     - name: Install calico custom resources
-      ansible.builtin.command: kubectl create -f /tmp/custom-resources.yaml
+      ansible.builtin.command: kubectl create -f /tmp/kube-flannel.yaml
       tags:
-        - calico
-
+        - flannel
+ 
     - name: Generate join command
       ansible.builtin.command: kubeadm token create --print-join-command
       register: join_command

@@ -1,2 +1,43 @@
 ---
 # tasks file for master
+
+- name: Download k3s
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s.sh
+    mode: '0755'
+  tags:
+    - k3s
+
+- name: Run k3s
+  ansible.builtin.shell:
+    cmd: cat /tmp/k3s.sh | sh -
+  tags:
+    - k3s
+
+- name: Setup kubeconfig for current(ansible?) user
+  ansible.builtin.command: "{{ item }}"
+  with_items:
+    - mkdir -p $HOME/.kube
+    - cp -i /etc/rancher/k3s/k3s.yaml $HOME/.kube/config
+    - chown root:root $HOME/.kube/config
+  tags:
+    - k3s
+
+- name: Generate token
+  ansible.builtin.command: cat /var/lib/rancher/k3s/server/node-token
+  register: join_token
+  tags:
+    - k3s
+    - token
+
+- name: Copy join command to local file
+  become: false
+  delegate_to: localhost
+  ansible.builtin.copy:
+    content: "curl -sfL https://get.k3s.io | K3S_URL=https://{{ ansible_default_ipv4.address }}:6443 K3S_TOKEN={{ join_token.stdout_lines[0] }} sh -"
+    dest: "./join-command"
+    mode: '0755'
+  tags:
+    - k3s
+    - token

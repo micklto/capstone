@@ -1,0 +1,4 @@
+---
+# handlers file for common
+- name: docker status
+  service: name=docker state=started
