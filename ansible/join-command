@@ -1,1 +1,1 @@
-kubeadm join 172.31.7.143:6443 --token v4qait.vvqy6nituwd7dba6 --discovery-token-ca-cert-hash sha256:285efc2dc738b59a4dc6789f4ac0f1a6f0fea1117f9dbdc25e5aca5f3dd0c8f0 
+curl -sfL https://get.k3s.io | K3S_URL=https://172.31.13.101:6443 K3S_TOKEN=K10379aeddbce78bfd2cd09992afcbf652d930656e8b77b591d668a26d25c3f1937::server:82725e8e24b753c634a38915bd236802 sh -

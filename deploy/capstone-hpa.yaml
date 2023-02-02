@@ -1,38 +1,12 @@
-apiVersion: autoscaling/v2
+apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
-  creationTimestamp: "2023-02-01T16:43:24Z"
   name: capstone
-  namespace: capstone
-  resourceVersion: "7327"
-  uid: db54d15d-1048-418c-b8ed-638b6ccfbf8a
 spec:
-  maxReplicas: 10
-  metrics:
-  - resource:
-      name: cpu
-      target:
-        averageUtilization: 50
-        type: Utilization
-    type: Resource
   minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 50
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: capstone
-status:
-  conditions:
-  - lastTransitionTime: "2023-02-01T16:43:39Z"
-    message: the HPA controller was able to get the target's current scale
-    reason: SucceededGetScale
-    status: "True"
-    type: AbleToScale
-  - lastTransitionTime: "2023-02-01T16:43:40Z"
-    message: 'the HPA was unable to compute the replica count: failed to get cpu utilization:
-      missing request for cpu'
-    reason: FailedGetResourceMetric
-    status: "False"
-    type: ScalingActive
-  currentMetrics: null
-  currentReplicas: 2
-  desiredReplicas: 0

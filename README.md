@@ -14,18 +14,24 @@ Given that online shopping experiences continue to evolve as per customer expect
 >All source is located in DockerHub Capstone Project, [https://github.com/micklto/capstone](https://github.com/micklto/capstone)
 
 ## DockerHub
->Repository repository for the PG DO - DevOps Capstone Project, [https://hub.docker.com/repository/docker/dockertmickler/capstone](https://hub.docker.com/repository/docker/dockertmickler/capstone)
+>Container repository for the PG DO - DevOps Capstone Project, [https://hub.docker.com/repository/docker/dockertmickler/capstone](https://hub.docker.com/repository/docker/dockertmickler/capstone)
 
 ## Assumptions
 
-#### Installed Tools
+
+### K3s
+
+[K3s](https://k3s.io) was chosen for the Kubernetes installation.  
+- The AWS environment of the Simplilearn AWS environment did not provide for enough resources to host a full Kubernetes installation.
+- K3s provided for a metrics server that is needed to measuer CPU utilization in our Horizontal Pod Autoscaling
+### Installed Tools
 - Git
 - Ansible
 - Terraform
 - JDK
 ## Application Development
 ### Spring Boot Application
-Application is called ```capstone``` and is a Spring Boot application that is deployed as a container.  It is dependant on a PostgreSQL datasource.  It will takes its paramaters through environment variables.
+Application is called ```capstone``` and is a Spring Boot application that is deployed as a container.  It is dependant on a PostgreSQL datasource.  It will takes its database connection paramaters through environment variables. Those environment varialbes will be provided through a Kubernetes ConfigMpa
 
 Steps for building Spring Boot Application
 
@@ -40,11 +46,11 @@ Maven is used to build the applicaiton and test source code.  It has a built in 
 - ```CapstoneApplicationTests.java``` - Tests to ensure the Spring context loads
 - ```HelloWorldConfigurationTests.java``` - Tests to see that the web server runs and responds with appropriate error codes.
 
-#### K6 Stress Testing
->On MacOS, use command ````bash brew install k6````
+#### Stress Testing
+>Run a container that constantly GET's the default page for our ```capstone``` application.  This will generate enough load on our application to cause it to scale.
 
 ````bash
-k6 run script.js
+kubectl run -i --tty load-generator --rm --image=busybox:1.28 --restart=Never -- /bin/sh -c "while sleep 0.01; do wget -q -O- http://<ClusterIP>:8080; done"
 ````
 
 ### DockerHub
@@ -59,6 +65,8 @@ docker push dockertmickler/capstone:0.0.1
 
 ### Project and Tester Details
 ### AWS
+
+The Simplilearn AWS environment was too limiting as far as size of servers that we could create.  This project was completed in an AWS "Free Tier" environment.
 
 Log into AWS Web Console
 ![AWS Web Console](/img/AWSWebConsole.png "AWS Web Console")
@@ -77,14 +85,14 @@ Pull details from the AWS API Access page
 ![AWS API Access](/img/AWSApiAccess.png "AWS API Access")
 - Access key - <YOUR_ACCESS_KEY>
 - Secret Key - <YOUR_SECRET_KEY>
-- Security Token - <YOUR_SECURITY_TOKEN>
 
->Update the variables in ```terraform/main.tf```
+>Update the variables in ```terraform/provider.tf```
 
 
 
 ### Terraform
 
+>Terraform is used for our Infrastructure as Code (IaC) implementation.  Terraform provisions all the AWS EC2 instances as well as any Software Defined Networks needed.  Terraform extracts the host data from the infrastructure creation process and provides it to Ansible by creating variable and inventory files.
 #### Files and Algorithms
 - ```main.tf``` - Entrypoint IaC script for terraform. Sections listed below
     - ```locals``` - local variable definition
@@ -96,7 +104,7 @@ Pull details from the AWS API Access page
     - ```resource``` - local file. Creates Ansible hosts file
     - ```provisioner``` - local exec. Runs ansible after infrastructure is created
 - ```provider.tf``` - Contains AWS provider
-- ```Demokey.pem``` - Downloaded Key Pair from AWS
+- ```mickltokey.pem``` - Downloaded Key Pair from AWS. Will <b>NOT</b> be included in source control for security reasons
 - ```hosts.tpl``` - template file for generating an Ansible configuration
 - ```ansiblevars.tpl``` - template file for generating an Ansible variables
 - ```variables.tf``` - main file for Terraform variable definition
@@ -111,44 +119,39 @@ Commands for Infrastructure Destruction:
 ```bash
 terraform destroy -auto-approve
 ````
-#### Ansible
->Install prerequisites for [kubernetes.core.k8s module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html#ansible-collections-kubernetes-core-k8s-module-requirements)
 
-````bash
-brew install json-c
-brew install pyyaml
-ansible-galaxy collection install kubernetes.core
-````
-##### Roles
-###### common
-###### master
-###### worker
-******* TODO ************
-Currently have to run the worker nodes ansible once the control node is finished.  Need to hook that up.
+### Ansible
+#### Modules
+>The [kubernetes.core.k8s module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html#ansible-collections-kubernetes-core-k8s-module-requirements) is leveraged in the ```deployments``` and the prerequisties will be installed during the execution of the ```common``` role.
+#### Roles
+>Ansible Roles were developed for a Highly Available Kubernetes installation.  The individual README files for the roles will contain a list of the tasks.
+- [common](./ansible/roles/common/README.md) - Installs prerequisites such as Docker
+- [deployments](./ansible/roles/deployments/README.md) - Contains Kubernetes deployment descriptors or specifications
+- [master](./ansible/roles/master/README.md) - Tasks for installing Kubernetes on a master or controller node
+- [worker](./ansible/roles/worker/README.md) - Tasks for install Kubernetes worker nodes and joining them to the controller
+
 
 ### Kubernetes
 
-#### Files in ```deploy``` directory
-- ```postgres-config.yaml``` - Congiguration for PostgreSQL deployment
-- ```postgres-pvc-pv.yaml``` - Persistent Volume Claims for PostgreSQL deployment
-- ```postgres-deployment.yaml``` - PostgreSQL deployment
-- ```postgres-service.yaml``` - Service creation for PostgreSQL deployment
-- ```deployment.yaml``` - Deploy ```capstone``` project
-- ```capstone-service.yaml``` - Expose ```capstone``` project as a service
+#### Deployments
+>The ```deployment``` Ansible role is used to deploy the ```capstone``` application and a ```postgresql``` service for persisting data.  In addition, ```Role``` and ```RoleBinding``` creation is performed by this Ansible role.  The specification files are listed below with their desriptions.
 
->Install Postgres server with the following commands
-```bash
-kubectl apply -f postgres-config.yaml
-kubectl apply -f postgres-pvc-pv.yaml
-kubectl apply -f postgres-deployment.yaml
-kubectl apply -f postgres-service.yaml
-````
->Deploy ```capstone``` application
+- Postgresql
+    - ```postgres-config.yaml``` - Congiguration for PostgreSQL deployment
+    - ```postgres-pvc-pv.yaml``` - Persistent Volume Claims for PostgreSQL deployment
+    - ```postgres-deployment.yaml``` - PostgreSQL deployment
+    - ```postgres-service.yaml``` - Service creation for PostgreSQL deployment
+- capstone
+    - ```deployment.yaml``` - Deploy ```capstone``` project
+    - ```capstone-service.yaml``` - Expose ```capstone``` project as a ClusterIP service
+    - ```capstone-hpa.yaml``` - Enable Horizontal Pod Autoscalling for ```capstone``` project
 
-````bash
-kubectl apply -f deployment.yaml
-kubectl apply -f capstone-service.yaml
-````
+#### RBAC
+- Role
+    - ```capstone-dev-role.yaml``` - Creates developer role for ```capstone``` namespace
+- Role Binding
+    - ```micklto-role-binding.yaml``` - Creates developer role for ```capstone``` namespace
+
 
 
 #### Expose ```capstone``` application as a public service
@@ -158,7 +161,7 @@ kubectl expose deployment capstone --type=LoadBalancer
 
 #### Horizontal autoscale ```capstone``` deployment
 ````bash
-kubectl autoscale deployment capstone --cpu-percent=50 --min=2 --max=10
+kubectl autoscale deployment capstone --cpu-percent=50 --min=2 --max=6
 ````
 #### Metrics server
 
@@ -176,29 +179,22 @@ NOTES:
 2. This can be used for job application.  This project can be used to demonstrate your skills in this area.
 
 
-
-
-
-## TODO
-- master runs through fine.  Running nodes works.  Can run kubectl get nodes but they aren't in a good state. 
->Kubernetes check on the pods. 
-````bash
-ssh 
-kubectl get nodes -o wide
-kubectl describe pod <podname>
-shows cni not installed
-````
-- install prerequisites for kubernetes ansible module on master nodes
-- copy of deployment goes to /home/ubuntu/deploy/deploy/*.yaml.  It should go under root I think
+TODO
+- Create Role and Role Binding per the assignment
+    - The yaml files are created.  
+    - Proven deployable because I did kubectl apply from command prompt on server
+    - TODO - Hook these yaml files into Ansible role and document how to prove the role binding worked
 - backup etcd
-- Do we need to install the metrics server ??????????
-- Create autoscaling of app
+
+- Document autoscaling of app
+- Document AWS Free Tier screens to get the data.
 - figure out how to stress the application to make it scale (jmeter may be what I want to do)
-- Move to Ansible Role - incorporate master-playbook.yaml and node-playbook.yaml
-- Describe main sections of Terraform main.tf
+
+
 - Describe tasks in ansible playbooks.  Give them descriptive names.  Describe them in this doc
 - Fully document project for delivery
 - REMOVE ALL TODO Tags in project
+- REMOVE ALL UNUSED FILES
 
 ```bash
 <project>

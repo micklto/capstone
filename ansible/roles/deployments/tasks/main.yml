@@ -11,6 +11,10 @@
   tags:
     - deploy
 
+- name: Print out the namespace before using it
+  ansible.builtin.debug:
+    msg: "{{ app_namespace }}"
+
 - name: Create a k8s namespace
   kubernetes.core.k8s:
     name: "{{ app_namespace }}"
@@ -71,3 +75,13 @@
   tags:
     - deploy
     - apply
+
+- name: Define HorizontalPodAutoscalar
+  kubernetes.core.k8s:
+    state: present
+    src: /root/deploy/capstone-hpa.yaml
+    namespace: "{{ app_namespace }}"
+  tags:
+    - deploy
+    - apply
+

@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,30 +8,29 @@ metadata:
 spec:
   replicas: 2
   selector:
-      matchLabels:
-        app: capstone
+    matchLabels:
+      app: capstone
   template:
-      metadata:
-        labels:
-            app: capstone
-      spec:
-        containers:
-        - name: capstone 
+    metadata:
+      labels:
+        app: capstone
+    spec:
+      containers:
+        - name: capstone
           image: dockertmickler/capstone:0.0.1
           resources:
-          requests:
-            memory: "64Mi"
-            cpu: "250m"
-          limits:
-            memory: "128Mi"
-            cpu: "500m"      
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+            requests:
+              cpu: "250m"
+              memory: "64Mi"
           ports:
-          - containerPort: 8080
+            - containerPort: 8080
           env:
-              - name: SPRING_DATASOURCE_PASSWORD
-                value: postgres
-              - name: SPRING_DATASOURCE_URL
-                value: jdbc:postgresql://postgres:5432/postgresdb?useSSL=false
-              - name: SPRING_DATASOURCE_USERNAME
-                value: postgres
-
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: postgres
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres:5432/postgresdb?useSSL=false
+            - name: SPRING_DATASOURCE_USERNAME
+              value: postgres

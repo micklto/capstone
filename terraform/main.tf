@@ -210,9 +210,9 @@ resource "local_file" "hosts_cfg" {
     }
   )
   filename = "../ansible/inventory/hosts.cfg" 
-
+/* 
   provisioner "local-exec" {
     command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ${local_file.hosts_cfg.filename} --user ${local.ssh_user} --private-key ${local.private_key_path} ../ansible/playbook.yaml -vvv"
-  }
+  } */
 }
 
