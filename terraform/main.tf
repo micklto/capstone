@@ -6,8 +6,6 @@ locals {
   private_key_path = "/Users/toshmickler/projects/capstone/terraform/mickltokey.pem"
 }
 
-
-
 resource "aws_security_group" "demoaccess" {
 	name   = "demoaccess"
 	vpc_id = local.vpc_id

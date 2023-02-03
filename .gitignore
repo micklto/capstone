@@ -41,3 +41,4 @@ ansible/join-command
 terraform/Demokey.pem
 terraform/mickltokey.pem
 ansible/join-command
+maventestoutput.txt

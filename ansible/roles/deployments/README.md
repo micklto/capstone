@@ -1,38 +1,38 @@
-Role Name
+deployments
 =========
 
-A brief description of the role goes here.
+Ansible role that creates the ```PostgreSQL``` and ```capstone``` deployments in Kubernetes.
 
 Requirements
 ------------
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+The [kubernetes.core.k8s module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html#ansible-collections-kubernetes-core-k8s-module-requirements) is leveraged in the ```deployments``` role and the prerequisties will be installed during the execution of the ```common``` role.
 
 Role Variables
 --------------
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+This role defines a default of ```app_namespace```.  This is the name of the namespace in which the Kubernetes objects are created.
 
 Dependencies
 ------------
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+The ```common``` , ```master```, and ```worker``` roles are expected to run first.
 
-Example Playbook
-----------------
-
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
-
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
-
-License
+Tasks
 -------
 
-BSD
+- name: Copy deploy directory to remote
+- name: Print out the namespace before using it
+- name: Create a k8s namespace
+- name: Apply Postgres configuration
+- name: Apply Postgres Persistent Volume Claim
+- name: Apply Postgres deployment
+- name: Create Postgres Service
+- name: Create capstone deployment
+- name: Create capstone service
+- name: Define HorizontalPodAutoscalar
 
 Author Information
 ------------------
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+tmickler@gmail.com

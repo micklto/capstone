@@ -26,17 +26,17 @@
       - gnupg-agent
       - software-properties-common
       - python3-pip
-
+      - jq
 
 - name: Install prerequisities for kubernetes python package
   ansible.builtin.pip:
-    name: 
-      - virtualenv 
-      - setuptools 
+    name:
+      - virtualenv
+      - setuptools
 
 - name: Install kubernetes python package
   ansible.builtin.pip:
-    name: kubernetes      
+    name: kubernetes
 
 - name: Add an apt signing key for Docker
   ansible.builtin.apt_key:
@@ -59,4 +59,4 @@
       - docker-ce-cli
       - containerd.io
   notify:
-    - docker status
+    - Docker status

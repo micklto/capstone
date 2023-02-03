@@ -1,7 +1,0 @@
----
-
-- name: Deploy Postgres and capstone application
-  hosts: control_nodes
-  become: true
-  roles:
-    - deployments

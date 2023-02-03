@@ -17,13 +17,12 @@ Given that online shopping experiences continue to evolve as per customer expect
 >Container repository for the PG DO - DevOps Capstone Project, [https://hub.docker.com/repository/docker/dockertmickler/capstone](https://hub.docker.com/repository/docker/dockertmickler/capstone)
 
 ## Assumptions
-
-
 ### K3s
 
 [K3s](https://k3s.io) was chosen for the Kubernetes installation.  
 - The AWS environment of the Simplilearn AWS environment did not provide for enough resources to host a full Kubernetes installation.
 - K3s provided for a metrics server that is needed to measuer CPU utilization in our Horizontal Pod Autoscaling
+- etcd enables snapshots out of the box.
 ### Installed Tools
 - Git
 - Ansible
@@ -31,7 +30,7 @@ Given that online shopping experiences continue to evolve as per customer expect
 - JDK
 ## Application Development
 ### Spring Boot Application
-Application is called ```capstone``` and is a Spring Boot application that is deployed as a container.  It is dependant on a PostgreSQL datasource.  It will takes its database connection paramaters through environment variables. Those environment varialbes will be provided through a Kubernetes ConfigMpa
+Application is called ```capstone``` and is a Spring Boot application that is deployed as a container.  It is dependant on a PostgreSQL datasource.  It will takes its database connection paramaters through environment variables. Those environment varialbes will be provided through ```env``` in the deployment descriptor.
 
 Steps for building Spring Boot Application
 
@@ -45,6 +44,7 @@ Steps for building Spring Boot Application
 Maven is used to build the applicaiton and test source code.  It has a built in ```test``` lifecycle.  When we run ```./mvnw install```, the test lifecycle is run. Two test files are run:
 - ```CapstoneApplicationTests.java``` - Tests to ensure the Spring context loads
 - ```HelloWorldConfigurationTests.java``` - Tests to see that the web server runs and responds with appropriate error codes.
+
 
 #### Stress Testing
 >Run a container that constantly GET's the default page for our ```capstone``` application.  This will generate enough load on our application to cause it to scale.
@@ -68,16 +68,23 @@ docker push dockertmickler/capstone:0.0.1
 
 The Simplilearn AWS environment was too limiting as far as size of servers that we could create.  This project was completed in an AWS "Free Tier" environment.
 
-Log into AWS Web Console
-![AWS Web Console](/img/AWSWebConsole.png "AWS Web Console")
+#### VPC
 
- from Simplilearn and get the following items
- - VPC ID
- - Create KeyPair called ```Demokey```
-    - Download ```Demokey.pem``` and place it in the ```terraform``` directory
+>Your VPC ID is needed for the Terraform scripts
+VPC > Your VPC > Select Your VPC and copy your VPC and modify the variable
+
+![VPC](/img/YourVPCs.png "VPC")
+
+#### EC2
+
+![Key Pairs](/img/KeyPairs.png "Key Pairs")
+
+
+ - Create a KeyPair. I created a key called ```mickltokey```.  You may call it something else but you will have to change the references in the Terraform files.
+    - Download ```mickltokey.pem``` and place it in the ```terraform``` directory
     - Terraform ensures that the user is the only one with permissions to this key.  Issue the following command:
     ```bash
-    chmod 400 Demokey.pem
+    chmod 400 mickltokey.pem
     ```
 
 Pull details from the AWS API Access page
@@ -119,10 +126,18 @@ Commands for Infrastructure Destruction:
 ```bash
 terraform destroy -auto-approve
 ````
-
+When the Terraform scripts complete successfuly, you can check your EC2 Console to make sure you have three compute nodes running.
+![Terraform Success](/img/TerraformSuccess.png "Terraform created nodes")
 ### Ansible
+
+>Ansible provides Configuration as Code (CaC). Once the infrastructure is built by Terraform, Ansible is used to install and configure the system to run our application in Kubernetes. 
+
+From the ```terraform``` directory, issue the command:
+````bash
+ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../ansible/inventory/hosts.cfg --user ubuntu --private-key /Users/toshmickler/projects/capstone/terraform/mickltokey.pem ../ansible/playbook.yaml
+````
 #### Modules
->The [kubernetes.core.k8s module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html#ansible-collections-kubernetes-core-k8s-module-requirements) is leveraged in the ```deployments``` and the prerequisties will be installed during the execution of the ```common``` role.
+>The [kubernetes.core.k8s module](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_module.html#ansible-collections-kubernetes-core-k8s-module-requirements) is leveraged in the ```deployments``` role and the prerequisties will be installed during the execution of the ```common``` role.
 #### Roles
 >Ansible Roles were developed for a Highly Available Kubernetes installation.  The individual README files for the roles will contain a list of the tasks.
 - [common](./ansible/roles/common/README.md) - Installs prerequisites such as Docker
@@ -132,6 +147,10 @@ terraform destroy -auto-approve
 
 
 ### Kubernetes
+
+#### Namespaces
+
+All work will be done in the ```capstone``` namespace. It gets created in the Ansible ```deployment``` role.
 
 #### Deployments
 >The ```deployment``` Ansible role is used to deploy the ```capstone``` application and a ```postgresql``` service for persisting data.  In addition, ```Role``` and ```RoleBinding``` creation is performed by this Ansible role.  The specification files are listed below with their desriptions.
@@ -152,47 +171,71 @@ terraform destroy -auto-approve
 - Role Binding
     - ```micklto-role-binding.yaml``` - Creates developer role for ```capstone``` namespace
 
+>Run the RBAC commands manually on the control server. The "apply" commands create the Role  and RoleBinding in the capstone namespace.  The "auth can-i" commands show that the micklto user can list pods but that the foo user cannot perform the same action.
 
-
-#### Expose ```capstone``` application as a public service
 ````bash
-kubectl expose deployment capstone --type=LoadBalancer
+kubectl apply -f capstone-dev-role.yaml
+kubectl apply -f micklto-role-binding.yaml
+kubectl auth can-i list pods --as micklto -n capstone
+kubectl auth can-i list pods --as foo -n capstone
+````
+![RBAC Role and RoleBinding Successful](/img/RBAC.png "RBAC Role and RoleBinding Successful")
+
+### Verification
+
+>Verification can be done on the ```control``` node of our infrastructure.  Access the AWS control panel, and go to EC2.  Select instances and then click on the instance with the control node tag.
+
+![Instance Summary](/img/InstanceSummaryWithConnectButton.png "Instance Summary")
+
+![Connect To Instance](/img/ConnectToInstance.png "Connect To Instance")
+
+SSH to control node 
+
+```bash
+ssh -i "mickltokey.pem" ubuntu@ec2-44-192-85-87.compute-1.amazonaws.com
+````
+Switch user to ```root``` as root will have kubectl configured. This will have been done in the ```master``` role.
+
+````bash
+sudo su -
 ````
 
-#### Horizontal autoscale ```capstone``` deployment
+List all Kubernetes objects in capstaone namespace
+
 ````bash
-kubectl autoscale deployment capstone --cpu-percent=50 --min=2 --max=6
+kubectl get all -n capstone
 ````
-#### Metrics server
+![capsone namespace](/img/CapstoneNamespace.png "All objects in capstone namespace")
 
->Verify ```capstone``` application in web browser
+>Verify ```capstone``` application with cUrl.  Use capstone ClusterIP found above for the IP below.
 
-- http://localhost:8080 - Basic web appliccation
-- http://localhost:8080/demo/all - View all users
+    curl http://<ClusterIP>:8080 - Basic web appliccation
+    curl http://>ClusterIP>:8080/demo/all - View all users
+
+![capsone web verification](/img/WebVerification.png "capstone web verification")
+
+Verification of Horizontal Pod Autoscaling
+
+![Horizontal Pod Autoscaling](/img/HPAVerification.png "Horizontal Pod Autoscaling Verification")
+
+
+#### etcd
+>K3s snapshots are enabled by default.
+
+The snapshot directory defaults to ```${data-dir}/server/db/snapshots```. The data-dir value defaults to ```/var/lib/rancher/k3s```.
 ## Conclusion
 
 Your conclusion on enhancing the application and defining the USPs (Unique Selling Points)
 
 
-NOTES:
-1. Need to test generating a load to show that the application auto scales (Jmeter, etc)
-2. This can be used for job application.  This project can be used to demonstrate your skills in this area.
-
-
 TODO
-- Create Role and Role Binding per the assignment
-    - The yaml files are created.  
-    - Proven deployable because I did kubectl apply from command prompt on server
-    - TODO - Hook these yaml files into Ansible role and document how to prove the role binding worked
-- backup etcd
 
 - Document autoscaling of app
 - Document AWS Free Tier screens to get the data.
-- figure out how to stress the application to make it scale (jmeter may be what I want to do)
-
 
 - Describe tasks in ansible playbooks.  Give them descriptive names.  Describe them in this doc
 - Fully document project for delivery
+- Investigate GraalVM for better memory utilization
 - REMOVE ALL TODO Tags in project
 - REMOVE ALL UNUSED FILES
 
