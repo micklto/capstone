@@ -187,7 +187,7 @@ data "aws_vpc" "selected" {
   id = local.vpc_id
 }
 
-# TODO - Need to wait until infrastructure is created before proceeding to run ansible
+
 # generate variable file for Ansible
 resource "local_file" "ansible_vars" {
   content = templatefile("${path.module}/ansiblevars.tpl",

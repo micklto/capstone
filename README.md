@@ -5,7 +5,7 @@
 Create a DevOps infrastructure for an e-commerce application to run on high-availability mode.
 
 ## Background of the problem statement:
-A popular payment application, EasyPay where users add money to their wallet accounts, faces an issue in its payment success rate. The timeout that occurs with
+A popular payment application, <b>EasyPay</b> where users add money to their wallet accounts, faces an issue in its payment success rate. The timeout that occurs with
 the connectivity of the database has been the reason for the issue.
 While troubleshooting, it is found that the database server has several downtime instances at irregular intervals. This situation compels the company to create their own infrastructure that runs in high-availability mode.
 Given that online shopping experiences continue to evolve as per customer expectations, the developers are driven to make their app more reliable, fast, and secure for improving the performance of the current system.
@@ -16,7 +16,10 @@ Given that online shopping experiences continue to evolve as per customer expect
 ## DockerHub
 >Container repository for the PG DO - DevOps Capstone Project, [https://hub.docker.com/repository/docker/dockertmickler/capstone](https://hub.docker.com/repository/docker/dockertmickler/capstone)
 
-## Assumptions
+## Assumptions and Observations
+
+###  AWS Simplilearn and Free Tier
+The cloud environment that we have to work with doesn't allow for a lot of memory usage per node.  The ```spring-boot``` application that was suggested  we use takes up a lot of memory.  When working on ```Horizontal Pod Autoscaling```, I set a 2 pod minimum and 4 pod maximum range to prevent the over taxing of the overall system.  When the system had a load applied, even with this modest range, there would be pods that could not start because those pods could not obtain the memory needed to run the container.
 ### K3s
 
 [K3s](https://k3s.io) was chosen for the Kubernetes installation.  
@@ -28,11 +31,16 @@ Given that online shopping experiences continue to evolve as per customer expect
 - Ansible
 - Terraform
 - JDK
+- Docker
+
+>Installation instructions can be found for your development platform at their respective websites.
 ## Application Development
 ### Spring Boot Application
-Application is called ```capstone``` and is a Spring Boot application that is deployed as a container.  It is dependant on a PostgreSQL datasource.  It will takes its database connection paramaters through environment variables. Those environment varialbes will be provided through ```env``` in the deployment descriptor.
+Application is called ```capstone``` and is a ```Spring Boot``` application that is deployed as a container.  It is dependant on a PostgreSQL datasource.  It will takes it\'s database connection paramaters through environment variables. Those environment varialbes will be provided through an ```env``` section in the deployment descriptor.
 
-Steps for building Spring Boot Application
+The spring-boot plugin for maven provides for building an OCI compliant container without using a Dockerfile. 
+
+#### Steps for building Spring Boot Application
 
 ```bash
 ./mvnw install 
@@ -45,33 +53,30 @@ Maven is used to build the applicaiton and test source code.  It has a built in 
 - ```CapstoneApplicationTests.java``` - Tests to ensure the Spring context loads
 - ```HelloWorldConfigurationTests.java``` - Tests to see that the web server runs and responds with appropriate error codes.
 
-
-#### Stress Testing
->Run a container that constantly GET's the default page for our ```capstone``` application.  This will generate enough load on our application to cause it to scale.
-
-````bash
-kubectl run -i --tty load-generator --rm --image=busybox:1.28 --restart=Never -- /bin/sh -c "while sleep 0.01; do wget -q -O- http://<ClusterIP>:8080; done"
-````
+For project submission, these results will be attached as a separate document.
 
 ### DockerHub
 
 >DockerHub will store the Spring Boot application and the PostgreSQL images used in the Kubernetes deployment.
 
-Steps to push to DockerHub
+#### Steps to push to DockerHub
+
+The steps for building the ```capstone``` application were given under the above "Spring Boot Application" section.
+
 ```bash
 docker tag capstone:0.0.1-SNAPSHOT dockertmickler/capstone:0.0.1
 docker push dockertmickler/capstone:0.0.1
 ```
 
 ### Project and Tester Details
-### AWS
+#### AWS
 
 The Simplilearn AWS environment was too limiting as far as size of servers that we could create.  This project was completed in an AWS "Free Tier" environment.
 
 #### VPC
 
 >Your VPC ID is needed for the Terraform scripts
-VPC > Your VPC > Select Your VPC and copy your VPC and modify the variable
+VPC > Your VPC > Select Your VPC and copy your VPC and modify the variable in ```main.tf```
 
 ![VPC](/img/YourVPCs.png "VPC")
 
@@ -87,19 +92,21 @@ VPC > Your VPC > Select Your VPC and copy your VPC and modify the variable
     chmod 400 mickltokey.pem
     ```
 
-Pull details from the AWS API Access page
+Pull details from the AWS IAM facility
 
-![AWS API Access](/img/AWSApiAccess.png "AWS API Access")
+> Create a user with admin privileges.  After creating user, you can download a `.csv` file that contains the ```Access key``` and ```Secret Key```
+
+![AWS IAM](/img/IAM.png "AWS IAM")
+
 - Access key - <YOUR_ACCESS_KEY>
 - Secret Key - <YOUR_SECRET_KEY>
 
 >Update the variables in ```terraform/provider.tf```
 
-
-
 ### Terraform
 
->Terraform is used for our Infrastructure as Code (IaC) implementation.  Terraform provisions all the AWS EC2 instances as well as any Software Defined Networks needed.  Terraform extracts the host data from the infrastructure creation process and provides it to Ansible by creating variable and inventory files.
+>Terraform is used for our Infrastructure as Code (IaC) implementation.  Terraform provisions all the AWS EC2 instances as well as any Software Defined Networks (SDN) needed.  Terraform extracts the host data from the infrastructure creation process and provides it to Ansible by creating variable and inventory files. It is possible to have Terraform run ansible scripts from a `local-exec` provisioner.  During the creation of this project, I decided that I would separate Ansible from Terraform.  I would let Terraform control the state of the infrastructure without being dependeant on whether the Ansible configuration was successful.  In a more real world environment, another automated process would be controlling terraform, checking for the existence of the infrastructure and then calling into Ansible.
+
 #### Files and Algorithms
 - ```main.tf``` - Entrypoint IaC script for terraform. Sections listed below
     - ```locals``` - local variable definition
@@ -128,9 +135,11 @@ terraform destroy -auto-approve
 ````
 When the Terraform scripts complete successfuly, you can check your EC2 Console to make sure you have three compute nodes running.
 ![Terraform Success](/img/TerraformSuccess.png "Terraform created nodes")
+
+Terraform creates an Ansible inventory file at ```ansible/inventory/hosts.cfg``` and varibles for the host ip\'s and CIDR at ```ansible/vars/default.yaml```.
 ### Ansible
 
->Ansible provides Configuration as Code (CaC). Once the infrastructure is built by Terraform, Ansible is used to install and configure the system to run our application in Kubernetes. 
+>Ansible provides Configuration as Code (CaC). Once the infrastructure is built by Terraform, Ansible is used to install and configure the system to run our application in Kubernetes.  
 
 From the ```terraform``` directory, issue the command:
 ````bash
@@ -145,12 +154,15 @@ ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ../ansible/inventory/hosts.c
 - [master](./ansible/roles/master/README.md) - Tasks for installing Kubernetes on a master or controller node
 - [worker](./ansible/roles/worker/README.md) - Tasks for install Kubernetes worker nodes and joining them to the controller
 
+#### Playbooks
+
+>This project uses one playbook, ```playbook.yaml```.  It coordinates the usage of the 4 roles defined above.
 
 ### Kubernetes
 
 #### Namespaces
 
-All work will be done in the ```capstone``` namespace. It gets created in the Ansible ```deployment``` role.
+All work will be done in the ```capstone``` namespace. The Ansible ```deployment``` role provides for creating this namespace.
 
 #### Deployments
 >The ```deployment``` Ansible role is used to deploy the ```capstone``` application and a ```postgresql``` service for persisting data.  In addition, ```Role``` and ```RoleBinding``` creation is performed by this Ansible role.  The specification files are listed below with their desriptions.
@@ -163,6 +175,7 @@ All work will be done in the ```capstone``` namespace. It gets created in the An
 - capstone
     - ```deployment.yaml``` - Deploy ```capstone``` project
     - ```capstone-service.yaml``` - Expose ```capstone``` project as a ClusterIP service
+- Horizontal Pod Autoscaling
     - ```capstone-hpa.yaml``` - Enable Horizontal Pod Autoscalling for ```capstone``` project
 
 #### RBAC
@@ -181,6 +194,9 @@ kubectl auth can-i list pods --as foo -n capstone
 ````
 ![RBAC Role and RoleBinding Successful](/img/RBAC.png "RBAC Role and RoleBinding Successful")
 
+### Horizontal Pod Autoscaling (HPA)
+
+>Horizontal Pod Autoscaling allows Kubernetes to monitor a deployment for different types of resource usage.  In our project we will monitor the CPU utilizaiton of our ```capstone``` deployment.  The rules that we have in place are that there will be at least two capstone pods and we will scale up to 4 pods if the CPU utilization goes above 50%.  HPA needs the Kubernetes metric server in place to monitor the pods. The hpa specification sets the HPA rules.
 ### Verification
 
 >Verification can be done on the ```control``` node of our infrastructure.  Access the AWS control panel, and go to EC2.  Select instances and then click on the instance with the control node tag.
@@ -194,6 +210,7 @@ SSH to control node
 ```bash
 ssh -i "mickltokey.pem" ubuntu@ec2-44-192-85-87.compute-1.amazonaws.com
 ````
+
 Switch user to ```root``` as root will have kubectl configured. This will have been done in the ```master``` role.
 
 ````bash
@@ -216,51 +233,22 @@ kubectl get all -n capstone
 
 Verification of Horizontal Pod Autoscaling
 
+
+>Run a container that constantly GET\'s the default page for our ```capstone``` application.  This will generate enough load on our application to cause it to scale.
+
+````bash
+kubectl run -i --tty load-generator --rm --image=busybox:1.28 --restart=Never -- /bin/sh -c "while sleep 0.01; do wget -q -O- http://<ClusterIP>:8080; done"
+````
+
 ![Horizontal Pod Autoscaling](/img/HPAVerification.png "Horizontal Pod Autoscaling Verification")
 
 
 #### etcd
->K3s snapshots are enabled by default.
-
-The snapshot directory defaults to ```${data-dir}/server/db/snapshots```. The data-dir value defaults to ```/var/lib/rancher/k3s```.
+>K3s enables snapshots by default. The snapshot directory defaults to ```${data-dir}/server/db/snapshots```. The data-dir value defaults to ```/var/lib/rancher/k3s```.
 ## Conclusion
 
-Your conclusion on enhancing the application and defining the USPs (Unique Selling Points)
+Availability and reliability are key for customer facing web applications.  Customers will not want to use the application if the website is difficult, slow, or alltogether down.
 
+Kubernetes is a perfect rememdy for <b>EasyPay\'s</b> reliability issues. Kubernetes is designed to restart applications if they are down. When Horizontal Pod Autoscaling is involved, the number of pods will grow to meet the increased demand. Kubernetes can spread its workload across worker nodes.  In AWS, those worker nodes can be in different areas of the world. Increased redundancy and speed are a result of this Kubernetes and AWS Cloud architecture.
 
-TODO
-
-- Document autoscaling of app
-- Document AWS Free Tier screens to get the data.
-
-- Describe tasks in ansible playbooks.  Give them descriptive names.  Describe them in this doc
-- Fully document project for delivery
-- Investigate GraalVM for better memory utilization
-- REMOVE ALL TODO Tags in project
-- REMOVE ALL UNUSED FILES
-
-```bash
-<project>
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <image>
-                        <name>example.com/library/${project.artifactId}</name>
-                    </image>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-</project>
-```
-
-or
-
-```bash
-mvn spring-boot:build-image -Dspring-boot.build-image.imageName=example.com/library/my-app:v1
-```
-
-
+Infrastructure as Code (IaC) and Configuration as Code(CaC) will allow for the architecture to be source controlled, peer reviewed, and automatically implemented. If more resources are needed, they can be easily added by adding items to the infrastructure scripts.
